@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Dashboard de Insights</h1>
+
+    <div class="card mb-4">
+        <div class="card-header">Vendas Mensais</div>
+        <div class="card-body">
+            <canvas id="salesChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Filtrar Dados</div>
+        <div class="card-body">
+            <form id="filterForm">
+                <div class="form-group">
+                    <label for="monthInput">Mês:</label>
+                    <input type="number" class="form-control" id="monthInput" name="month" placeholder="Digite o número do mês (1-12)">
+                </div>
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </form>
+            <div id="filterResult" class="mt-3"></div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Buscar Dados</div>
+        <div class="card-body">
+            <form id="searchForm">
+                <div class="form-group">
+                    <label for="searchInput">Termo de Busca:</label>
+                    <input type="text" class="form-control" id="searchInput" name="search_term" placeholder="Digite o termo de busca">
+                </div>
+                <button type="submit" class="btn btn-primary">Buscar</button>
+            </form>
+            <div id="searchResult" class="mt-3"></div>
+        </div>
+    </div>
+
+    {% if user.is_admin %}
+    <div class="card mb-4">
+        <div class="card-header">Exportar Dados</div>
+        <div class="card-body">
+            <button type="button" class="btn btn-success">Exportar</button>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        var salesData = {{ sales_data | tojson }};
+        var months = Object.keys(salesData);
+        var sales = Object.values(salesData);
+
+        var ctx = document.getElementById("salesChart").getContext("2d");
+        var salesChart = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: sales, // BUG: Eixos X e Y invertidos
+                datasets: [{
+                    label: "Vendas Mensais",
+                    data: months, // BUG: Eixos X e Y invertidos
+                    backgroundColor: "rgba(54, 162, 235, 0.5)",
+                    borderColor: "rgba(54, 162, 235, 1)",
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Script para o filtro de dados
+        document.getElementById("filterForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            var formData = new FormData(this);
+            fetch("/filter_data", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("filterResult").innerText = data.message;
+            })
+            .catch(error => console.error("Erro ao filtrar dados:", error));
+        });
+
+        // Script para o campo de busca (BUG: on_change mapeado para função inexistente)
+        document.getElementById("searchInput").addEventListener("input", function() {
+            // some_non_existent_function_for_search(); // Esta linha causaria um erro de referência
+        });
+
+        document.getElementById("searchForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            var formData = new FormData(this);
+            fetch("/search_data", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("searchResult").innerText = data.message;
+            })
+            .catch(error => console.error("Erro ao buscar dados:", error));
+        });
+
+    </script>
+{% endblock %}
+
+
